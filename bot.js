@@ -21,50 +21,55 @@ async function runBot(mode = 'attendance') {
 
     console.log('Logging in...');
     await page.goto(`${SITE_URL}login`);
-    await page.waitForTimeout(2000); 
+    await page.waitForTimeout(3000); 
     await page.waitForSelector('input[placeholder*="아이디"]');
     
-    // Clear and type
+    // Human-like sequence: Click -> Type -> Tab -> Type -> Enter
+    console.log('Filling credentials...');
     await page.click('input[placeholder*="아이디"]');
-    await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
-    await page.type('input[placeholder*="아이디"]', USER_ID, { delay: 50 });
+    await page.type('input[placeholder*="아이디"]', USER_ID, { delay: 100 });
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(500);
+    await page.type('input[placeholder*="비밀번호"]', USER_PASSWORD, { delay: 100 });
+    await page.waitForTimeout(500);
     
-    await page.click('input[placeholder*="비밀번호"]');
-    await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
-    await page.type('input[placeholder*="비밀번호"]', USER_PASSWORD, { delay: 50 });
-    
-    console.log('Clicking login button...');
-    const loginButton = page.locator('button:has-text("로그인")');
-    await loginButton.click();
+    console.log('Submitting via Enter key...');
+    await page.keyboard.press('Enter');
     
     // Wait for redirection
-    console.log('Waiting for redirection...');
-    await page.waitForTimeout(10000); 
+    console.log('Waiting for redirection (12s)...');
+    await page.waitForTimeout(12000); 
     
     const currentUrl = page.url();
     const loginBtnVisible = await page.locator('button:has-text("로그인")').isVisible();
     
     if (loginBtnVisible || currentUrl.includes('login')) {
       console.error('Login failed: Still on login page.');
-      const errorMsg = await page.evaluate(() => {
-        const selectors = ['.text-red-500', '[role="alert"]', '.error-message', '.text-danger'];
-        for (const s of selectors) {
-          const el = document.querySelector(s);
-          if (el && el.innerText.trim()) return el.innerText.trim();
-        }
-        // Specific error keywords (excluding normal words like '가입')
-        const keywords = ['틀렸습니다', '올바르지', '실패', '가입된 정보가 없습니다', '존재하지 않는'];
-        const allText = document.body.innerText;
-        for (const k of keywords) {
-          if (allText.includes(k)) return `Detected error: ${k}`;
-        }
-        return 'Unknown error (Possible wrong credentials or bot detection)';
+      const pageInfo = await page.evaluate(() => {
+        const errorEl = document.querySelector('.text-red-500, [role="alert"], .error-message');
+        const errorText = errorEl ? errorEl.innerText.trim() : '';
+        const bodyTextSnippet = document.body.innerText.slice(0, 500);
+        return { errorText, bodyTextSnippet };
       });
+
+      console.log(`Page Content Snippet: ${pageInfo.bodyTextSnippet}`);
+      
+      let errorMsg = pageInfo.errorText;
+      if (!errorMsg) {
+        const keywords = ['이메일 또는 비밀번호를 확인해주세요', '틀렸습니다', '올바르지', '실패'];
+        for (const k of keywords) {
+          if (pageInfo.bodyTextSnippet.includes(k)) {
+            errorMsg = `Detected error: ${k}`;
+            break;
+          }
+        }
+      }
+      
+      if (!errorMsg) errorMsg = 'Unknown error (Possible bot detection or CAPTCHA)';
       console.error(`Site status: ${errorMsg}`);
       throw new Error(`Login failed: ${errorMsg}`);
     }
+    console.log('Login successful.');
     console.log('Login successful.');
 
     if (mode === 'attendance') {
