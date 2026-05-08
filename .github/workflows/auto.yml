@@ -4,9 +4,11 @@ on:
   schedule:
     # 08:00 KST = 23:00 UTC (Previous day)
     - cron: '0 23 * * *'
+    # 09:00 KST = 00:00 UTC
+    - cron: '0 0 * * *'
     # 15:00 KST = 06:00 UTC
     - cron: '0 6 * * *'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   auto-bot:
@@ -26,29 +28,33 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install chromium
 
-      - name: Run Comment Bot
+      - name: Check Time and Day
+        id: time_check
+        run: |
+          KST_HOUR=$(TZ=Asia/Seoul date +%H)
+          KST_DAY=$(TZ=Asia/Seoul date +%u)
+          echo "KST Hour: $KST_HOUR, KST Day: $KST_DAY"
+          echo "kst_hour=$KST_HOUR" >> $GITHUB_OUTPUT
+          echo "kst_day=$KST_DAY" >> $GITHUB_OUTPUT
+
+      - name: Run Attendance (09:00 KST)
+        if: steps.time_check.outputs.kst_hour == '09' || github.event_name == 'workflow_dispatch'
+        run: node index.js attendance
+        env:
+          USER_ID: ${{ secrets.USER_ID }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+          SITE_URL: https://green-office.uk/
+
+      - name: Run Comment Bot (08:00 & 15:00 KST)
+        if: steps.time_check.outputs.kst_hour == '08' || steps.time_check.outputs.kst_hour == '15' || github.event_name == 'workflow_dispatch'
         run: node index.js comment
         env:
           USER_ID: ${{ secrets.USER_ID }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
           SITE_URL: https://green-office.uk/
 
-      - name: Check if Wednesday KST
-        id: day_check
-        run: |
-          # Get current hour and day in KST
-          # TZ=Asia/Seoul date +%u returns 1(Mon)-7(Sun)
-          KST_DAY=$(TZ=Asia/Seoul date +%u)
-          KST_HOUR=$(TZ=Asia/Seoul date +%H)
-          echo "Current KST Day: $KST_DAY, Hour: $KST_HOUR"
-          if [ "$KST_DAY" = "3" ] && [ "$KST_HOUR" = "08" ]; then
-            echo "is_wednesday=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_wednesday=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run Weekly Post
-        if: steps.day_check.outputs.is_wednesday == 'true' || github.event_name == 'workflow_dispatch'
+      - name: Run Weekly Post (Wednesdays 08:00 KST)
+        if: (steps.time_check.outputs.kst_hour == '08' && steps.time_check.outputs.kst_day == '3') || github.event_name == 'workflow_dispatch'
         run: node index.js post
         env:
           USER_ID: ${{ secrets.USER_ID }}

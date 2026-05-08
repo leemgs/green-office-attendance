@@ -21,36 +21,76 @@ async function runBot(mode = 'comment') {
     await page.fill('input[placeholder*="비밀번호"]', USER_PASSWORD);
     await page.click('button:has-text("로그인")');
     
-    // Wait for login to complete (redirect to home or profile)
-    await page.waitForTimeout(3000); 
+    // Wait and verify login
+    await page.waitForTimeout(5000); 
+    const loginBtn = await page.locator('button:has-text("로그인")').isVisible();
+    if (loginBtn) {
+      console.error('Login failed: Still on login page.');
+      // Check for error messages
+      const errorMsg = await page.locator('.text-red-500, [role="alert"]').innerText().catch(() => '');
+      if (errorMsg) console.error(`Error message: ${errorMsg}`);
+      throw new Error('Login failed. Please check your ID and PASSWORD.');
+    }
+    console.log('Login successful.');
 
     if (mode === 'comment') {
       await handleComment(page);
     } else if (mode === 'post') {
       await handlePost(page);
+    } else if (mode === 'attendance') {
+      await handleAttendance(page);
     }
 
   } catch (error) {
     console.error('Error during bot execution:', error);
-    // Take screenshot on failure
-    await page.screenshot({ path: `error-${Date.now()}.png` });
+    await page.screenshot({ path: `error-${mode}-${Date.now()}.png` });
+    throw error;
   } finally {
     await browser.close();
   }
 }
 
+async function handleAttendance(page) {
+  console.log('Navigating to attendance page...');
+  await page.goto(`${SITE_URL}attendance`);
+  await page.waitForTimeout(3000);
+
+  console.log('Selecting attendance option: 오늘도 화이팅');
+  // Try to find the button with the text provided by user
+  const optionBtn = page.locator('button:has-text("오늘도 화이팅")');
+  if (await optionBtn.isVisible()) {
+    await optionBtn.click();
+  } else {
+    console.log('Option "오늘도 화이팅" not found, searching for alternatives...');
+    const altOptions = ["출근 완료!", "좋은 아침입니다", "직접 입력"];
+    for (const opt of altOptions) {
+      const btn = page.locator(`button:has-text("${opt}")`);
+      if (await btn.isVisible()) {
+        await btn.click();
+        break;
+      }
+    }
+  }
+
+  console.log('Clicking the final attendance button...');
+  // The large button with the leaf emoji
+  const submitBtn = page.locator('button:has-text("출석하기"), span:has-text("출석하기")');
+  await submitBtn.click();
+  
+  await page.waitForTimeout(3000);
+  console.log('Attendance completed.');
+}
+
 async function handleComment(page) {
+  // (Remaining handleComment code stays mostly same, but with minor robustness improvements)
   console.log('Navigating to home to find a post...');
   await page.goto(SITE_URL);
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
-  // Find all post links. Based on the grid structure seen earlier.
-  // We look for links that look like they lead to posts.
   const postLinks = await page.$$eval('a[href*="/posts/"]', links => links.map(a => a.href));
   
   if (postLinks.length === 0) {
     console.log('No posts found. Looking for alternative selectors...');
-    // Fallback: search for any link inside the main grid
     const altLinks = await page.$$eval('main a', links => links.map(a => a.href).filter(href => href.includes('/posts/')));
     if (altLinks.length > 0) postLinks.push(...altLinks);
   }
@@ -69,11 +109,9 @@ async function handleComment(page) {
 
   console.log(`Leaving comment: ${message}`);
   
-  // Look for comment textarea
-  const commentArea = await page.waitForSelector('textarea', { timeout: 5000 });
+  const commentArea = await page.waitForSelector('textarea', { timeout: 10000 });
   await commentArea.fill(message);
   
-  // Click submit button (usually contains "등록" or is a button near the textarea)
   const submitBtn = await page.locator('button:has-text("등록"), button:has-text("댓글")').first();
   await submitBtn.click();
   
@@ -84,19 +122,24 @@ async function handleComment(page) {
 async function handlePost(page) {
   console.log('Creating a new post about Orange Jasmine...');
   
-  // Find "Write" button. Often labeled "글쓰기" or an icon.
-  // Let's try to find a link to /posts/new or a button with text "글쓰기"
   await page.goto(SITE_URL);
-  const writeBtn = await page.locator('a[href*="/write"], button:has-text("글쓰기")').first();
+  await page.waitForTimeout(2000);
+  
+  const writeBtn = await page.locator('a[href*="/write"], button:has-text("글쓰기"), a:has-text("글쓰기")').first();
   
   if (await writeBtn.isVisible()) {
     await writeBtn.click();
   } else {
-    // Try direct navigation if possible
+    console.log('Write button not found on home, navigating directly to /write');
     await page.goto(`${SITE_URL}write`);
   }
   
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
+
+  // Check if we are on the write page (some sites use different paths)
+  if (page.url().includes('login')) {
+    throw new Error('Redirected to login page. Post writing requires being logged in.');
+  }
 
   const title = "오렌지 자스민 키우기: 향기로운 반려식물을 위한 꿀팁 🌿";
   const content = `
@@ -112,17 +155,20 @@ async function handlePost(page) {
   `.trim();
 
   console.log('Filling post content...');
-  await page.fill('input[placeholder*="제목"]', title);
+  // More robust selector for title
+  const titleInput = page.locator('input[placeholder*="제목"], input[name*="title"], input[type="text"]').first();
+  await titleInput.fill(title);
   
-  // Content might be a textarea or a contenteditable div (common in Next.js/React editors)
-  const contentSelector = 'textarea, div[contenteditable="true"]';
-  await page.fill(contentSelector, content);
+  console.log('Filling body content...');
+  // More robust selector for content
+  const contentArea = page.locator('textarea, div[contenteditable="true"], .ProseMirror').first();
+  await contentArea.fill(content);
   
   console.log('Submitting post...');
   const submitBtn = await page.locator('button:has-text("등록"), button:has-text("작성"), button:has-text("완료")').first();
   await submitBtn.click();
   
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(5000);
   console.log('Post created successfully.');
 }
 
