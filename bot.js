@@ -21,22 +21,26 @@ async function runBot(mode = 'attendance') {
 
     console.log(`Logging in... (ID length: ${USER_ID.length}, Pass length: ${USER_PASSWORD.length})`);
     await page.goto(`${SITE_URL}login`);
-    await page.waitForTimeout(3000); 
+    await page.waitForTimeout(5000); 
     await page.waitForSelector('input[placeholder*="아이디"]');
     
-    // Human-like sequence: Click -> Type -> Tab -> Type -> Enter
-    console.log('Filling credentials...');
-    await page.click('input[placeholder*="아이디"]');
-    await page.type('input[placeholder*="아이디"]', USER_ID.trim(), { delay: 100 });
-    await page.keyboard.press('Tab');
+    console.log('Filling ID...');
+    await page.fill('input[placeholder*="아이디"]', USER_ID.trim());
     await page.waitForTimeout(500);
-    await page.type('input[placeholder*="비밀번호"]', USER_PASSWORD.trim(), { delay: 100 });
+    
+    console.log('Filling Password...');
+    await page.fill('input[placeholder*="비밀번호"]', USER_PASSWORD.trim());
     await page.waitForTimeout(1000);
     
-    console.log('Clicking login button via script...');
+    console.log('Submitting login form via direct script submission...');
     await page.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('로그인'));
-      if (btn) btn.click();
+      const form = document.querySelector('form');
+      if (form) {
+        form.submit();
+      } else {
+        const btn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('로그인'));
+        if (btn) btn.click();
+      }
     });
     
     // Wait for redirection
