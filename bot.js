@@ -162,11 +162,20 @@ async function handlePost(page) {
 
   console.log('Filling post title and content...');
   try {
-    const titleInput = page.locator('input[placeholder*="제목"], input[name="title"]').first();
+    // Wait for the posting iframe to load
+    const iframeElement = await page.waitForSelector('iframe', { timeout: 10000 });
+    const postFrame = await iframeElement.contentFrame();
+    if (!postFrame) {
+      throw new Error('Posting iframe not found');
+    }
+
+    // Use frame locators for title and content inputs
+    const titleInput = postFrame.locator('input[name="title"], input[placeholder*="제목"]').first();
     await titleInput.waitFor({ state: 'visible', timeout: 5000 });
     await titleInput.fill(title);
 
-    const contentArea = page.locator('textarea[placeholder*="내용"], textarea[name="content"], textarea, .toastui-editor-contents, div[contenteditable="true"]').first();
+    const contentArea = postFrame.locator('textarea[name="content"], textarea[placeholder*="내용"], .toastui-editor-contents, div[contenteditable="true"]').first();
+    await contentArea.waitFor({ state: 'visible', timeout: 5000 });
     await contentArea.fill(content);
 
     console.log('Clicking the post submit button...');
