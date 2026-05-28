@@ -130,41 +130,47 @@ async function handleAttendance(page) {
 
 async function handlePost(page) {
   console.log('Navigating to posting page...');
-  // 게시판 작성 페이지로 이동 (URL은 실제 환경에 맞게 수정 필요)
-  await page.goto(`${SITE_URL}board/write`);
+  await page.goto(`${SITE_URL}posts/new`);
   await page.waitForTimeout(3000);
 
-  const title = "🌿 [이번주의 식물] 오렌지자스민 키우기 & 관리 팁";
-  const content = `오렌지자스민은 달콤하고 은은한 향기가 나는 하얀 꽃과 붉은 열매를 감상할 수 있어 반려식물로 인기가 매우 높습니다. 초보자도 비교적 쉽게 키울 수 있는 오렌지자스민의 핵심 관리 정보를 정리해 드립니다!
+  const title = "🌿 [오피스 가드닝] 오렌지 자스민, 사무실 실내에서 죽지 않고 키우는 핵심 가이드";
+  const content = `오렌지 자스민은 은은하고 달콤한 자스민 향기와 붉은 열매를 감상할 수 있어 인기 있는 반려식물입니다. 하지만 본래 햇빛과 통풍이 잘 통하는 야외나 베란다에서 자라던 식물이기에, 사무실 실내에서는 관리를 조금만 소홀히 해도 금방 잎이 떨어지거나 죽기 쉽습니다.
 
-### 1. 햇빛과 온도
-- **햇빛**: 밝은 빛을 매우 좋아합니다. 하루 4~6시간 이상 밝은 곳(양지~반양지)에 두어야 꽃이 잘 핍니다. 한여름의 강한 직사광선은 잎을 타게 할 수 있으니 주의하세요.
-- **온도**: 15~25℃ 사이에서 가장 잘 자랍니다. 추위에 약하므로 겨울철에는 반드시 실내(10℃ 이상 유지)로 들여서 관리해야 합니다.
+사무실 실내라는 한정된 환경 속에서 오렌지 자스민을 건강하게 오래 키우는 핵심 관리 노하우를 정리해 드립니다!
 
-### 2. 물 주기 및 습도
-- **물 주기**: 겉흙이 말랐을 때 화분 배수구로 물이 흘러나올 정도로 충분히 줍니다. 보통 주 1~2회 정도 확인하는 것이 좋습니다. 겨울철에는 물 주는 횟수를 줄입니다.
-- **습도**: 공중 습도가 높은 환경을 좋아합니다. 잎 주변에 자주 분무해 주면 건강하게 유지하는 데 큰 도움이 됩니다.
+---
 
-### 3. 꽃과 열매 관리
-- **꽃**: 보통 봄부터 초여름(4~6월) 사이에 피지만, 환경이 좋으면 1년 내내 꽃을 볼 수도 있습니다.
-- **열매**: 꽃이 진 후 열매가 맺히는데, 실내에서는 벌이나 나비가 없어 자연 수정이 어렵습니다. 꽃이 피었을 때 붓 등으로 가볍게 인공 수정을 시도해 보세요.
+### 1. 햇빛 관리 (사무실 명당 찾기 ☀️)
+*   **직사광선에 준하는 밝은 곳**: 오렌지 자스민은 빛 요구량이 매우 높은 식물입니다. 사무실 내에서 가장 해가 잘 드는 창가 자리에 배치해 주세요.
+*   **식물 생장용 LED 조명 활용**: 창문이 없거나 해가 잘 들지 않는 사무실이라면 **식물용 LED 조명(식물등)**을 필수적으로 설치해 주세요. 하루 최소 8~12시간 정도 식물등을 쬐어 주면 실내에서도 웃자라지 않고 꽃을 피울 수 있습니다.
 
-### 4. 기타 관리 팁
-- **가지치기**: 꽃이 진 후에 가지를 정리해 주면 수형이 예뻐지고 다음 꽃을 더 풍성하게 피울 수 있습니다.
-- **분갈이**: 1~2년에 한 번, 봄이나 가을에 화분이 작아졌을 때 배수가 잘되는 흙으로 분갈이해 줍니다.
-- **통풍**: 통풍이 잘되는 환경을 매우 좋아하므로, 실내에서 키우더라도 환기를 자주 시켜주세요!`;
+### 2. 건조한 사무실 공기 극복하기 (습도 조절 💧)
+*   **습도 보충**: 냉난방기가 항상 작동하는 사무실은 공기가 매우 건조합니다. 습도가 낮으면 오렌지 자스민의 잎이 누렇게 마르거나 떨어질 수 있습니다.
+*   **분무 및 가습기**: 분무기로 잎 주변에 자주 물을 뿌려주거나, 식물 옆에 소형 개인용 가습기를 틀어두면 큰 도움이 됩니다. 물받침에 자갈을 깔고 물을 조금 부어 화분을 올려두는 것도 좋은 방법입니다.
+
+### 3. 실패 없는 물 주기 규칙 (과습 주의 🪵)
+*   **속흙 확인 후 물 주기**: 실내에서는 야외보다 흙이 마르는 속도가 현저히 느립니다. 따라서 날짜를 정해놓고 물을 주면 100% 과습으로 뿌리가 썩어 죽게 됩니다.
+*   **확인 방법**: 손가락 한 두 마디 깊이로 흙을 찔러보아 속흙까지 보슬보슬하게 말라 있을 때, 화분 배수구 밑으로 물이 흘러나올 때까지 듬뿍 줍니다. 물을 준 후 화분 받침에 고인 물은 반드시 바로 비워주세요.
+
+### 4. 실내 가드닝의 최대 난제: 통풍 (바람 보내기 💨)
+*   **통풍의 중요성**: 오렌지 자스민이 실내에서 죽는 가장 큰 원인 중 하나는 '통풍 부족'입니다. 바람이 통하지 않으면 과습이 오기 쉽고 병충해(응애, 깍지벌레 등)가 발생할 확률이 급격히 높아집니다.
+*   **해결책**: 창문을 자주 열어 환기를 시켜주는 것이 가장 좋지만, 여의치 않다면 미니 선풍기나 서큘레이터를 약한 바람으로 회전시켜 식물 주변의 공기를 계속 순환시켜 주세요.
+
+### 5. 사무실 맞춤 온도 관리 🌡️
+*   오렌지 자스민이 자라기에 가장 좋은 온도는 15~25℃입니다.
+*   **주의할 점**: 냉난방기의 찬바람이나 따뜻한 바람이 식물에 직접 닿지 않도록 해주세요. 온도가 급격히 변하거나 건조한 바람을 맞으면 잎이 우수수 떨어질 수 있습니다. 겨울철 퇴근 시간 이후나 주말에 난방이 꺼져 사무실 온도가 10℃ 이하로 내려가지 않도록 관리해 주세요.`;
 
   console.log('Filling post title and content...');
   try {
-    const titleInput = page.locator('input[name="title"], input[placeholder*="제목"]').first();
+    const titleInput = page.locator('input[placeholder*="제목"], input[name="title"]').first();
     await titleInput.waitFor({ state: 'visible', timeout: 5000 });
     await titleInput.fill(title);
 
-    const contentArea = page.locator('textarea[name="content"], textarea, .toastui-editor-contents, div[contenteditable="true"]').first();
+    const contentArea = page.locator('textarea[placeholder*="내용"], textarea[name="content"], textarea, .toastui-editor-contents, div[contenteditable="true"]').first();
     await contentArea.fill(content);
 
     console.log('Clicking the post submit button...');
-    const submitBtn = page.locator('button:has-text("등록"), button:has-text("작성"), button[type="submit"]').last();
+    const submitBtn = page.locator('button:has-text("등록하기"), button:has-text("등록"), button:has-text("작성"), button[type="submit"]').last();
     await submitBtn.click();
     
     await page.waitForTimeout(3000);

@@ -4,8 +4,8 @@ on:
   schedule:
     # 07:00 KST = 22:00 UTC (Previous day)
     - cron: '0 22 * * *'
-    # 10:00 KST every Thursday = 01:00 UTC on Thursday
-    - cron: '0 1 * * 4'
+    # 09:00 KST every Wednesday = 00:00 UTC on Wednesday
+    - cron: '0 0 * * 3'
   workflow_dispatch:
     inputs:
       mode:
@@ -49,8 +49,8 @@ jobs:
           USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD }}
           SITE_URL: https://green-office.uk/
 
-      - name: Run Post (10:00 KST Thursday)
-        if: github.event.schedule == '0 1 * * 4' || github.event.inputs.mode == 'post'
+      - name: Run Post (09:00 KST Wednesday)
+        if: github.event.schedule == '0 0 * * 3' || github.event.inputs.mode == 'post'
         run: node index.js post
         env:
           USER_ID: ${{ secrets.USER_ID || vars.USER_ID }}
