@@ -42,21 +42,9 @@ jobs:
         run: |
           KST_TIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M")
           
-          # Detect specific failure reason from logs
-          if [ -f attendance.log ] && grep -q 'ATTENDANCE_TIME_REJECTED' attendance.log; then
-            TITLE="⏰ 출석 시간 제한으로 출석 실패 ($KST_TIME)"
-            REASON="사이트에서 출석 가능 시간(평일 06:00~11:00 KST)이 아니라는 이유로 출석을 거부했습니다."
-          elif [ -f attendance.log ] && grep -q 'ATTENDANCE_NO_OPTION' attendance.log; then
-            TITLE="🔍 출석 버튼을 찾지 못해 출석 실패 ($KST_TIME)"
-            REASON="출석 옵션 버튼(출근 완료! 등)을 페이지에서 찾을 수 없었습니다. UI가 변경되었을 수 있습니다."
-          else
-            TITLE="출석 자동 체크 실패 ($KST_TIME)"
-            REASON="Playwright 실행 중 에러가 발생했거나 로그인/출석 버튼을 찾지 못했습니다."
-          fi
+          TITLE="$KST_TIME 출석 체크 실패했습니다."
           
-          echo "### ⚠️ 출석 자동 체크 실패" > issue_body.md
-          echo "- **실행 시간 (KST):** $KST_TIME" >> issue_body.md
-          echo "- **실패 원인:** $REASON" >> issue_body.md
+          echo "### ⚠️ 출석 체크 실패" > issue_body.md
           echo "" >> issue_body.md
           echo "#### 📋 상세 실행 로그:" >> issue_body.md
           echo "\`\`\`text" >> issue_body.md
@@ -67,6 +55,6 @@ jobs:
           fi
           echo "\`\`\`" >> issue_body.md
           
-          gh issue create --title "$TITLE" --body-file issue_body.md --label "attendance-failure"
+          gh issue create --title "$TITLE" --body-file issue_body.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
