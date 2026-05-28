@@ -2,8 +2,8 @@ name: Auto login-attendance and post
 
 on:
   schedule:
-    # 07:00 KST = 22:00 UTC (Previous day)
-    - cron: '0 22 * * *'
+    # 07:00 KST Mon-Fri = 22:00 UTC Sun-Thu (attendance available weekdays 06:00-11:00 KST)
+    - cron: '0 22 * * 0-4'
     # 09:00 KST every Wednesday = 00:00 UTC on Wednesday
     - cron: '0 0 * * 3'
   workflow_dispatch:
