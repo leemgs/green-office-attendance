@@ -132,8 +132,7 @@ async function handlePost(page) {
   console.log('Navigating to posting page...');
   await page.goto(`${SITE_URL}posts/new`, { waitUntil: 'networkidle', timeout: 30000 });
 
-  // This is a Next.js CSR page — the form is rendered by React after JS hydration.
-  // Wait extra time for React to mount the form components.
+  // This is a Next.js CSR page — wait for React to mount the category selection screen.
   console.log('Waiting for Next.js CSR hydration...');
   await page.waitForTimeout(5000);
 
@@ -164,14 +163,53 @@ async function handlePost(page) {
 *   오렌지 자스민이 자라기에 가장 좋은 온도는 15~25℃입니다.
 *   **주의할 점**: 냉난방기의 찬바람이나 따뜻한 바람이 식물에 직접 닿지 않도록 해주세요. 온도가 급격히 변하거나 건조한 바람을 맞으면 잎이 우수수 떨어질 수 있습니다. 겨울철 퇴근 시간 이후나 주말에 난방이 꺼져 사무실 온도가 10℃ 이하로 내려가지 않도록 관리해 주세요.`;
 
-  console.log('Filling post title and content...');
   try {
-    // Dump the page HTML for debugging if elements are not found
-    const bodyText = await page.locator('body').innerText();
-    console.log('Page body text (first 300 chars):', bodyText.substring(0, 300));
+    // ── Step 1: Select the post category ──
+    // The page first shows a category picker: "어떤 글을 작성하시겠어요?"
+    //   - 긍정 문구 (+10 물방울)
+    //   - 동료 칭찬 (+30 물방울)
+    //   - 퀘스트 (준비중)
+    // We need to click "긍정 문구" before the title/content form appears.
+    console.log('Selecting post category: 긍정 문구...');
 
-    // Broad selector list — the CSR form may render inputs/textareas with various attributes.
-    // Try multiple selector strategies with a generous timeout for React hydration.
+    const categorySelectors = [
+      'text=긍정 문구',
+      ':text("긍정 문구")',
+      'div:has-text("긍정 문구")',
+      'button:has-text("긍정 문구")',
+      'a:has-text("긍정 문구")',
+    ];
+
+    let categoryClicked = false;
+    for (const sel of categorySelectors) {
+      console.log(`Trying category selector: ${sel}`);
+      try {
+        const loc = page.locator(sel).first();
+        await loc.waitFor({ state: 'visible', timeout: 10000 });
+        await loc.click();
+        categoryClicked = true;
+        console.log(`Clicked category with selector: ${sel}`);
+        break;
+      } catch {
+        console.log(`Category selector ${sel} not found, trying next...`);
+      }
+    }
+
+    if (!categoryClicked) {
+      // Maybe the category was already selected (page remembered last choice)
+      console.log('Could not find category buttons. Checking if form is already visible...');
+    }
+
+    // Wait for the form to render after category selection
+    console.log('Waiting for post form to appear...');
+    await page.waitForTimeout(3000);
+
+    // Log the page state after category selection
+    const bodyText = await page.locator('body').innerText();
+    console.log('Page body text after category (first 500 chars):', bodyText.substring(0, 500));
+
+    // ── Step 2: Fill the title ──
+    console.log('Filling post title...');
     const titleSelectors = [
       'input[placeholder*="제목"]',
       'input[name="title"]',
@@ -183,7 +221,7 @@ async function handlePost(page) {
       console.log(`Trying title selector: ${sel}`);
       const loc = page.locator(sel).first();
       try {
-        await loc.waitFor({ state: 'visible', timeout: 15000 });
+        await loc.waitFor({ state: 'visible', timeout: 10000 });
         titleInput = loc;
         console.log(`Found title input with selector: ${sel}`);
         break;
@@ -193,16 +231,16 @@ async function handlePost(page) {
     }
 
     if (!titleInput) {
-      // Last resort: dump full HTML for debugging
       const html = await page.content();
-      console.log('Full page HTML (first 2000 chars):', html.substring(0, 2000));
+      console.log('Full page HTML (first 3000 chars):', html.substring(0, 3000));
       throw new Error('Could not find any title input element on the posting page.');
     }
 
     await titleInput.fill(title);
     console.log('Title filled successfully.');
 
-    // Content area selectors
+    // ── Step 3: Fill the content ──
+    console.log('Filling post content...');
     const contentSelectors = [
       'textarea[placeholder*="내용"]',
       'textarea[name="content"]',
@@ -232,7 +270,7 @@ async function handlePost(page) {
     await contentArea.fill(content);
     console.log('Content filled successfully.');
 
-    // Submit button
+    // ── Step 4: Submit ──
     console.log('Clicking the post submit button...');
     const submitSelectors = [
       'button:has-text("등록하기")',
@@ -260,9 +298,9 @@ async function handlePost(page) {
 
     await submitBtn.click();
     await page.waitForTimeout(3000);
-    console.log('Post completed.');
+    console.log('Post completed successfully!');
   } catch (err) {
-    console.log('Error filling post. Please check the selectors for the posting page.', err);
+    console.log('Error during post submission:', err);
     throw err;
   }
 }
