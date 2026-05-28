@@ -1,28 +1,17 @@
-name: Auto login-attendance and post
+name: Auto Attendance
 
 on:
   schedule:
     # 07:00 KST Mon-Fri = 22:00 UTC Sun-Thu (attendance available weekdays 06:00-11:00 KST)
     - cron: '0 22 * * 0-4'
-    # 09:00 KST every Wednesday = 00:00 UTC on Wednesday
-    - cron: '0 0 * * 3'
   workflow_dispatch:
-    inputs:
-      mode:
-        description: 'Select bot mode (attendance / post)'
-        required: true
-        default: 'attendance'
-        type: choice
-        options:
-          - attendance
-          - post
 
 permissions:
   contents: read
   issues: write
 
 jobs:
-  auto-bot:
+  attendance:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,7 +29,6 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run Attendance (07:00 KST Mon-Fri)
-        if: github.event.schedule == '0 22 * * 0-4' || github.event.inputs.mode == 'attendance' || (github.event_name == 'workflow_dispatch' && !github.event.inputs.mode)
         run: |
           set -o pipefail
           node index.js attendance 2>&1 | tee attendance.log
@@ -49,16 +37,8 @@ jobs:
           USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD }}
           SITE_URL: https://green-office.uk/
 
-      - name: Run Post (09:00 KST Wednesday)
-        if: github.event.schedule == '0 0 * * 3' || github.event.inputs.mode == 'post'
-        run: node index.js post
-        env:
-          USER_ID: ${{ secrets.USER_ID || vars.USER_ID }}
-          USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD }}
-          SITE_URL: https://green-office.uk/
-
       - name: Create Issue on Attendance Failure
-        if: failure() && (github.event.schedule == '0 22 * * 0-4' || github.event.inputs.mode == 'attendance' || (github.event_name == 'workflow_dispatch' && !github.event.inputs.mode))
+        if: failure()
         run: |
           KST_TIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M")
           
