@@ -104,6 +104,25 @@ async function handleAttendance(page) {
   await page.goto(`${SITE_URL}attendance`);
   await page.waitForTimeout(3000);
 
+  // ── Check for time-restriction rejection ──
+  // The site rejects attendance outside weekdays 06:00-11:00 KST with this message.
+  const bodyText = await page.locator('body').innerText();
+  const rejectionMessage = '출석 가능 시간은 평일 오전 6시~11시입니다';
+  if (bodyText.includes(rejectionMessage)) {
+    const errorMsg = `ATTENDANCE_TIME_REJECTED: 출석이 거부되었습니다. 사이트 메시지: "${rejectionMessage}"`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // ── Check if already checked in ──
+  const alreadyCheckedPhrases = ['출석 완료', '이미 출석', '오늘 출석을 완료'];
+  for (const phrase of alreadyCheckedPhrases) {
+    if (bodyText.includes(phrase)) {
+      console.log(`Already checked in today (detected: "${phrase}"). Skipping.`);
+      return;
+    }
+  }
+
   console.log('Selecting attendance option: 출근 완료!');
   const optionBtn = page.locator('button:has-text("출근 완료!")');
   if (await optionBtn.isVisible()) {
@@ -111,12 +130,19 @@ async function handleAttendance(page) {
   } else {
     console.log('Option "출근 완료!" not found, searching for alternatives...');
     const altOptions = ["오늘도 화이팅", "좋은 아침입니다", "커피 한 잔 하실래요?", "오늘도 무사히", "직접 입력"];
+    let found = false;
     for (const opt of altOptions) {
       const btn = page.locator(`button:has-text("${opt}")`);
       if (await btn.isVisible()) {
         await btn.click();
+        found = true;
+        console.log(`Selected alternative option: "${opt}"`);
         break;
       }
+    }
+    if (!found) {
+      console.log('Page body text (first 500 chars):', bodyText.substring(0, 500));
+      throw new Error('ATTENDANCE_NO_OPTION: 출석 옵션 버튼을 찾을 수 없습니다.');
     }
   }
 
@@ -125,7 +151,16 @@ async function handleAttendance(page) {
   await submitBtn.click();
   
   await page.waitForTimeout(3000);
-  console.log('Attendance completed.');
+
+  // ── Verify after submit — check for late rejection ──
+  const afterText = await page.locator('body').innerText();
+  if (afterText.includes(rejectionMessage)) {
+    const errorMsg = `ATTENDANCE_TIME_REJECTED: 출석 제출 후 거부되었습니다. 사이트 메시지: "${rejectionMessage}"`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  console.log('Attendance completed successfully.');
 }
 
 async function handlePost(page) {
