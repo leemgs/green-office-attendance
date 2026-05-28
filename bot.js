@@ -130,8 +130,12 @@ async function handleAttendance(page) {
 
 async function handlePost(page) {
   console.log('Navigating to posting page...');
-  await page.goto(`${SITE_URL}posts/new`);
-  await page.waitForTimeout(3000);
+  await page.goto(`${SITE_URL}posts/new`, { waitUntil: 'networkidle', timeout: 30000 });
+
+  // This is a Next.js CSR page — the form is rendered by React after JS hydration.
+  // Wait extra time for React to mount the form components.
+  console.log('Waiting for Next.js CSR hydration...');
+  await page.waitForTimeout(5000);
 
   const title = "🌿 [오피스 가드닝] 오렌지 자스민, 사무실 실내에서 죽지 않고 키우는 핵심 가이드";
   const content = `오렌지 자스민은 은은하고 달콤한 자스민 향기와 붉은 열매를 감상할 수 있어 인기 있는 반려식물입니다. 하지만 본래 햇빛과 통풍이 잘 통하는 야외나 베란다에서 자라던 식물이기에, 사무실 실내에서는 관리를 조금만 소홀히 해도 금방 잎이 떨어지거나 죽기 쉽습니다.
@@ -162,26 +166,99 @@ async function handlePost(page) {
 
   console.log('Filling post title and content...');
   try {
-    // Wait for the posting iframe to load
-    const iframeElement = await page.waitForSelector('iframe', { timeout: 10000 });
-    const postFrame = await iframeElement.contentFrame();
-    if (!postFrame) {
-      throw new Error('Posting iframe not found');
+    // Dump the page HTML for debugging if elements are not found
+    const bodyText = await page.locator('body').innerText();
+    console.log('Page body text (first 300 chars):', bodyText.substring(0, 300));
+
+    // Broad selector list — the CSR form may render inputs/textareas with various attributes.
+    // Try multiple selector strategies with a generous timeout for React hydration.
+    const titleSelectors = [
+      'input[placeholder*="제목"]',
+      'input[name="title"]',
+      'input[type="text"]',
+    ];
+
+    let titleInput = null;
+    for (const sel of titleSelectors) {
+      console.log(`Trying title selector: ${sel}`);
+      const loc = page.locator(sel).first();
+      try {
+        await loc.waitFor({ state: 'visible', timeout: 15000 });
+        titleInput = loc;
+        console.log(`Found title input with selector: ${sel}`);
+        break;
+      } catch {
+        console.log(`Selector ${sel} not found, trying next...`);
+      }
     }
 
-    // Use frame locators for title and content inputs
-    const titleInput = postFrame.locator('input[name="title"], input[placeholder*="제목"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 5000 });
+    if (!titleInput) {
+      // Last resort: dump full HTML for debugging
+      const html = await page.content();
+      console.log('Full page HTML (first 2000 chars):', html.substring(0, 2000));
+      throw new Error('Could not find any title input element on the posting page.');
+    }
+
     await titleInput.fill(title);
+    console.log('Title filled successfully.');
 
-    const contentArea = postFrame.locator('textarea[name="content"], textarea[placeholder*="내용"], .toastui-editor-contents, div[contenteditable="true"]').first();
-    await contentArea.waitFor({ state: 'visible', timeout: 5000 });
+    // Content area selectors
+    const contentSelectors = [
+      'textarea[placeholder*="내용"]',
+      'textarea[name="content"]',
+      'textarea',
+      'div[contenteditable="true"]',
+      '.toastui-editor-contents',
+    ];
+
+    let contentArea = null;
+    for (const sel of contentSelectors) {
+      console.log(`Trying content selector: ${sel}`);
+      const loc = page.locator(sel).first();
+      try {
+        await loc.waitFor({ state: 'visible', timeout: 10000 });
+        contentArea = loc;
+        console.log(`Found content area with selector: ${sel}`);
+        break;
+      } catch {
+        console.log(`Selector ${sel} not found, trying next...`);
+      }
+    }
+
+    if (!contentArea) {
+      throw new Error('Could not find any content textarea on the posting page.');
+    }
+
     await contentArea.fill(content);
+    console.log('Content filled successfully.');
 
+    // Submit button
     console.log('Clicking the post submit button...');
-    const submitBtn = page.locator('button:has-text("등록하기"), button:has-text("등록"), button:has-text("작성"), button[type="submit"]').last();
+    const submitSelectors = [
+      'button:has-text("등록하기")',
+      'button:has-text("등록")',
+      'button:has-text("작성")',
+      'button[type="submit"]',
+    ];
+
+    let submitBtn = null;
+    for (const sel of submitSelectors) {
+      const loc = page.locator(sel).last();
+      try {
+        await loc.waitFor({ state: 'visible', timeout: 5000 });
+        submitBtn = loc;
+        console.log(`Found submit button with selector: ${sel}`);
+        break;
+      } catch {
+        continue;
+      }
+    }
+
+    if (!submitBtn) {
+      throw new Error('Could not find any submit button on the posting page.');
+    }
+
     await submitBtn.click();
-    
     await page.waitForTimeout(3000);
     console.log('Post completed.');
   } catch (err) {
