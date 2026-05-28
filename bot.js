@@ -104,13 +104,13 @@ async function handleAttendance(page) {
   await page.goto(`${SITE_URL}attendance`);
   await page.waitForTimeout(3000);
 
-  console.log('Selecting attendance option: 오늘도 화이팅');
-  const optionBtn = page.locator('button:has-text("오늘도 화이팅")');
+  console.log('Selecting attendance option: 출근 완료!');
+  const optionBtn = page.locator('button:has-text("출근 완료!")');
   if (await optionBtn.isVisible()) {
     await optionBtn.click();
   } else {
-    console.log('Option "오늘도 화이팅" not found, searching for alternatives...');
-    const altOptions = ["출근 완료!", "좋은 아침입니다", "직접 입력"];
+    console.log('Option "출근 완료!" not found, searching for alternatives...');
+    const altOptions = ["오늘도 화이팅", "좋은 아침입니다", "커피 한 잔 하실래요?", "오늘도 무사히", "직접 입력"];
     for (const opt of altOptions) {
       const btn = page.locator(`button:has-text("${opt}")`);
       if (await btn.isVisible()) {

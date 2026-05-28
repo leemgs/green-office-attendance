@@ -7,6 +7,19 @@ on:
     # 10:00 KST every Thursday = 01:00 UTC on Thursday
     - cron: '0 1 * * 4'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Select bot mode (attendance / post)'
+        required: true
+        default: 'attendance'
+        type: choice
+        options:
+          - attendance
+          - post
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   auto-bot:
@@ -26,27 +39,43 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install chromium
 
-      - name: Check Time and Day
-        id: time_check
-        run: |
-          KST_HOUR=$(TZ=Asia/Seoul date +%H)
-          KST_DAY=$(TZ=Asia/Seoul date +%u)
-          echo "KST Hour: $KST_HOUR, KST Day: $KST_DAY"
-          echo "KST_HOUR=$KST_HOUR" >> $GITHUB_ENV
-          echo "KST_DAY=$KST_DAY" >> $GITHUB_ENV
-
       - name: Run Attendance (07:00 KST)
-        if: env.KST_HOUR == '07' || github.event_name == 'workflow_dispatch'
-        run: node index.js attendance
+        if: github.event.schedule == '0 22 * * *' || github.event.inputs.mode == 'attendance' || (github.event_name == 'workflow_dispatch' && !github.event.inputs.mode)
+        run: |
+          set -o pipefail
+          node index.js attendance 2>&1 | tee attendance.log
         env:
           USER_ID: ${{ secrets.USER_ID || vars.USER_ID }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD }}
           SITE_URL: https://green-office.uk/
 
       - name: Run Post (10:00 KST Thursday)
-        if: env.KST_HOUR == '10' && env.KST_DAY == '4'
+        if: github.event.schedule == '0 1 * * 4' || github.event.inputs.mode == 'post'
         run: node index.js post
         env:
           USER_ID: ${{ secrets.USER_ID || vars.USER_ID }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD }}
           SITE_URL: https://green-office.uk/
+
+      - name: Create Issue on Attendance Failure
+        if: failure() && (github.event.schedule == '0 22 * * *' || github.event.inputs.mode == 'attendance' || (github.event_name == 'workflow_dispatch' && !github.event.inputs.mode))
+        run: |
+          KST_TIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M")
+          TITLE="출석 자동 체크 실패 ($KST_TIME)"
+          
+          echo "### ⚠️ 출석 자동 체크 실패" > issue_body.md
+          echo "- **실행 시간 (KST):** $KST_TIME" >> issue_body.md
+          echo "- **실패 원인:** Playwright 실행 중 에러가 발생했거나 로그인/출석 버튼을 찾지 못했습니다." >> issue_body.md
+          echo "" >> issue_body.md
+          echo "#### 📋 상세 실행 로그:" >> issue_body.md
+          echo "\`\`\`text" >> issue_body.md
+          if [ -f attendance.log ]; then
+            cat attendance.log >> issue_body.md
+          else
+            echo "로그 파일을 찾을 수 없습니다." >> issue_body.md
+          fi
+          echo "\`\`\`" >> issue_body.md
+          
+          gh issue create --title "$TITLE" --body-file issue_body.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
