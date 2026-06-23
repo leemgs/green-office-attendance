@@ -185,10 +185,10 @@ async function handlePost(page) {
     try {
       const fs = require('fs');
       const path = require('path');
-      const coworksFile = path.join(__dirname, 'data', 'coworks.txt');
+      const coworkersFile = path.join(__dirname, 'data', 'coworkers.txt');
       
-      if (fs.existsSync(coworksFile)) {
-        const fileContent = fs.readFileSync(coworksFile, 'utf8');
+      if (fs.existsSync(coworkersFile)) {
+        const fileContent = fs.readFileSync(coworkersFile, 'utf8');
         const names = fileContent
           .split(/\r?\n/)
           .map(name => name.trim())
@@ -199,13 +199,13 @@ async function handlePost(page) {
           selectedName = names[randomIndex];
           console.log(`Selected co-worker for praise: ${selectedName}`);
         } else {
-          console.log('coworks.txt is empty.');
+          console.log('coworkers.txt is empty.');
         }
       } else {
-        console.log(`coworks.txt not found at ${coworksFile}`);
+        console.log(`coworkers.txt not found at ${coworkersFile}`);
       }
     } catch (fsError) {
-      console.error('Error reading coworks.txt:', fsError);
+      console.error('Error reading coworkers.txt:', fsError);
     }
 
     title = `${selectedName}을 칭찬합니다.`;
