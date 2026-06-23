@@ -171,22 +171,63 @@ async function handlePost(page) {
   console.log('Waiting for Next.js CSR hydration...');
   await page.waitForTimeout(5000);
 
+  const kstDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const day = kstDate.getDay(); // 0: Sun, 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat
+
+  let categoryName = "긍정 문구";
   let title = "💡 [오늘의 명언] 긍정적인 하루를 시작하세요";
   let content = "오늘 하루도 작은 목표를 세우고 하나씩 달성해보는 건 어떨까요?\n\n여러분의 오늘 하루도 의미 있는 작은 성취들로 가득하길 응원합니다! 🙌";
 
-  try {
-    console.log('Fetching daily quote from API...');
-    const response = await fetch('https://korean-advice-open-api.vercel.app/api/advice');
-    if (response.ok) {
-      const data = await response.json();
-      title = `💡 [오늘의 명언] ${data.author}의 한마디`;
-      content = `"${data.message}"\n\n- ${data.author} (${data.authorProfile || '명언'}) -`;
-      console.log(`Successfully fetched quote: ${title}`);
-    } else {
-      console.log(`Failed to fetch quote, status: ${response.status}`);
+  if (day === 5) {
+    categoryName = "동료 칭찬";
+    
+    let selectedName = "동료";
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const coworksFile = path.join(__dirname, 'data', 'coworks.txt');
+      
+      if (fs.existsSync(coworksFile)) {
+        const fileContent = fs.readFileSync(coworksFile, 'utf8');
+        const names = fileContent
+          .split(/\r?\n/)
+          .map(name => name.trim())
+          .filter(name => name.length > 0);
+          
+        if (names.length > 0) {
+          const randomIndex = Math.floor(Math.random() * names.length);
+          selectedName = names[randomIndex];
+          console.log(`Selected co-worker for praise: ${selectedName}`);
+        } else {
+          console.log('coworks.txt is empty.');
+        }
+      } else {
+        console.log(`coworks.txt not found at ${coworksFile}`);
+      }
+    } catch (fsError) {
+      console.error('Error reading coworks.txt:', fsError);
     }
-  } catch (apiError) {
-    console.log('Error fetching quote API, using fallback content:', apiError.message);
+
+    title = `${selectedName}을 칭찬합니다.`;
+    content = `${selectedName}님과 함께 근무할 수 있어 무척 든든하고 행복합니다.\n` +
+              `언제나 따뜻한 미소와 적극적인 배려로 동료들에게 큰 힘이 되어 주셔서 깊이 감사드립니다.\n\n` +
+              `우리 모두 서로 격려하고 고마움을 나누는 밝은 직장 분위기가 이어지길 바라며, ${selectedName}님의 행복한 하루를 응원합니다! 👍`;
+  } else {
+    categoryName = "긍정 문구";
+    try {
+      console.log('Fetching daily quote from API...');
+      const response = await fetch('https://korean-advice-open-api.vercel.app/api/advice');
+      if (response.ok) {
+        const data = await response.json();
+        title = `💡 [오늘의 명언] ${data.author}의 한마디`;
+        content = `"${data.message}"\n\n- ${data.author} (${data.authorProfile || '명언'}) -`;
+        console.log(`Successfully fetched quote: ${title}`);
+      } else {
+        console.log(`Failed to fetch quote, status: ${response.status}`);
+      }
+    } catch (apiError) {
+      console.log('Error fetching quote API, using fallback content:', apiError.message);
+    }
   }
 
   try {
@@ -195,15 +236,15 @@ async function handlePost(page) {
     //   - 긍정 문구 (+10 물방울)
     //   - 동료 칭찬 (+30 물방울)
     //   - 퀘스트 (준비중)
-    // We need to click "긍정 문구" before the title/content form appears.
-    console.log('Selecting post category: 긍정 문구...');
+    // We need to click categoryName before the title/content form appears.
+    console.log(`Selecting post category: ${categoryName}...`);
 
     const categorySelectors = [
-      'text=긍정 문구',
-      ':text("긍정 문구")',
-      'div:has-text("긍정 문구")',
-      'button:has-text("긍정 문구")',
-      'a:has-text("긍정 문구")',
+      `text=${categoryName}`,
+      `:text("${categoryName}")`,
+      `div:has-text("${categoryName}")`,
+      `button:has-text("${categoryName}")`,
+      `a:has-text("${categoryName}")`,
     ];
 
     let categoryClicked = false;

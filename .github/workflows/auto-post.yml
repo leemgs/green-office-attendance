@@ -2,8 +2,8 @@ name: Auto Post
 
 on:
   schedule:
-    # 09:00 KST every Wednesday = 00:00 UTC on Wednesday
-    - cron: '0 0 * * 3'
+    # 09:00 KST Monday, Thursday, Friday = 00:00 UTC on Mon, Thu, Fri
+    - cron: '0 0 * * 1,4,5'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install chromium
 
-      - name: Run Post (09:00 KST Wednesday)
+      - name: Run Post (09:00 KST Mon, Thu, Fri)
         run: |
           set -o pipefail
           node index.js post 2>&1 | tee post.log
