@@ -2,10 +2,10 @@ name: Auto Post
 
 on:
   schedule:
-    # 09:00 KST Monday, Thursday, Friday = 00:00 UTC on Mon, Thu, Fri
-    # - Mon, Thu: "긍정 문구" 카테고리로 오늘의 명언 포스팅 등록
+    # 09:00 KST Monday, Friday = 00:00 UTC on Mon, Fri
+    # - Mon: "긍정 문구" 카테고리로 오늘의 명언 포스팅 등록
     # - Fri: "동료 칭찬" 카테고리로 "동료 칭찬(***을 칭찬합니다.)" 포스팅 등록 (data/coworkers.txt에서 무작위 선택)
-    - cron: '0 0 * * 1,4,5'
+    - cron: '0 0 * * 1,5'
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install chromium
 
-      - name: Run Post (09:00 KST Mon, Thu, Fri)
+      - name: Run Post (09:00 KST Mon, Fri)
         run: |
           set -o pipefail
           node index.js post 2>&1 | tee post.log
