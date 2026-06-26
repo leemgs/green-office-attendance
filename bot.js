@@ -213,32 +213,58 @@ async function handlePost(page) {
               `언제나 따뜻한 미소와 적극적인 배려로 동료들에게 큰 힘이 되어 주셔서 깊이 감사드립니다.\n\n` +
               `우리 모두 서로 격려하고 고마움을 나누는 밝은 직장 분위기가 이어지길 바라며, ${selectedName}님의 행복한 하루를 응원합니다! 👍`;
   } else if (day === 3) {
-    // 수요일: "긍정 문구" 카테고리로 "알면 도움이 되는 생활 정보" 포스팅.
-    // data/life-tips.json 목록을 ISO 주차 번호로 순환 선택 → 매주 새로운 내용이 등록됩니다.
+    // 수요일: "긍정 문구" 카테고리로 "오늘의 행복 한마디" 포스팅.
+    // 1순위) 외부 API(행복 명언)로 매주 새로운 글을 자동 수집 — 월요일(일반 명언)과 "행복" 테마로 차별화.
+    // 2순위) API 실패 시 data/life-tips.json을 주차 순환 선택하여 폴백.
     categoryName = "긍정 문구";
+    let happinessFetched = false;
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const tipsFile = path.join(__dirname, 'data', 'life-tips.json');
-
-      if (fs.existsSync(tipsFile)) {
-        const tips = JSON.parse(fs.readFileSync(tipsFile, 'utf8'));
-        if (Array.isArray(tips) && tips.length > 0) {
-          // 연중 주차(week-of-year)로 인덱스를 정해 매주 다음 글이 순서대로 등록되도록 함
-          const startOfYear = new Date(kstDate.getFullYear(), 0, 1);
-          const weekOfYear = Math.floor((kstDate - startOfYear) / (7 * 24 * 60 * 60 * 1000));
-          const tip = tips[weekOfYear % tips.length];
-          title = `💡 [알면 도움이 되는 생활 정보] ${tip.title}`;
-          content = tip.content;
-          console.log(`Selected life tip (week ${weekOfYear}): ${tip.title}`);
+      console.log('Fetching happiness quote from API...');
+      const response = await fetch('https://api.sobabear.com/happiness/random-quote');
+      if (response.ok) {
+        const json = await response.json();
+        const data = json && json.data;
+        if (data && data.content) {
+          title = `🍀 [오늘의 행복 한마디] ${data.author || ''}의 한마디`.replace(/\s+의 한마디$/, '의 한마디');
+          content = `"${data.content}"\n\n- ${data.author || '행복 명언'} -`;
+          happinessFetched = true;
+          console.log(`Successfully fetched happiness quote: ${title}`);
         } else {
-          console.log('life-tips.json is empty, using fallback content.');
+          console.log('Happiness API response missing content, will fall back.');
         }
       } else {
-        console.log(`life-tips.json not found at ${tipsFile}, using fallback content.`);
+        console.log(`Failed to fetch happiness quote, status: ${response.status}, will fall back.`);
       }
-    } catch (tipError) {
-      console.error('Error reading life-tips.json, using fallback content:', tipError);
+    } catch (apiError) {
+      console.log('Error fetching happiness API, will fall back to life-tips.json:', apiError.message);
+    }
+
+    // 폴백: 외부 API 실패 시 로컬 생활정보 목록을 주차 순환으로 사용
+    if (!happinessFetched) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const tipsFile = path.join(__dirname, 'data', 'life-tips.json');
+
+        if (fs.existsSync(tipsFile)) {
+          const tips = JSON.parse(fs.readFileSync(tipsFile, 'utf8'));
+          if (Array.isArray(tips) && tips.length > 0) {
+            // 연중 주차(week-of-year)로 인덱스를 정해 매주 다음 글이 순서대로 등록되도록 함
+            const startOfYear = new Date(kstDate.getFullYear(), 0, 1);
+            const weekOfYear = Math.floor((kstDate - startOfYear) / (7 * 24 * 60 * 60 * 1000));
+            const tip = tips[weekOfYear % tips.length];
+            title = `💡 [알면 도움이 되는 생활 정보] ${tip.title}`;
+            content = tip.content;
+            console.log(`Fallback: selected life tip (week ${weekOfYear}): ${tip.title}`);
+          } else {
+            console.log('life-tips.json is empty, using default content.');
+          }
+        } else {
+          console.log(`life-tips.json not found at ${tipsFile}, using default content.`);
+        }
+      } catch (tipError) {
+        console.error('Error reading life-tips.json, using default content:', tipError);
+      }
     }
   } else {
     categoryName = "긍정 문구";
