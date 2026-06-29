@@ -267,20 +267,33 @@ async function handlePost(page) {
       }
     }
   } else {
+    // 월요일(및 그 외 수동 실행일): "긍정 문구" 카테고리로 "오늘의 명언 + 의미 해설" 포스팅.
+    // data/quotes.json(명언+저자+해설)을 주차 순환 선택 → 매주 다른 명언과 함께 정확한 의미 해설이 등록됨.
     categoryName = "긍정 문구";
     try {
-      console.log('Fetching daily quote from API...');
-      const response = await fetch('https://korean-advice-open-api.vercel.app/api/advice');
-      if (response.ok) {
-        const data = await response.json();
-        title = `💡 [오늘의 명언] ${data.author}의 한마디`;
-        content = `"${data.message}"\n\n- ${data.author} (${data.authorProfile || '명언'}) -`;
-        console.log(`Successfully fetched quote: ${title}`);
+      const fs = require('fs');
+      const path = require('path');
+      const quotesFile = path.join(__dirname, 'data', 'quotes.json');
+
+      if (fs.existsSync(quotesFile)) {
+        const quotes = JSON.parse(fs.readFileSync(quotesFile, 'utf8'));
+        if (Array.isArray(quotes) && quotes.length > 0) {
+          // 연중 주차(week-of-year)로 인덱스를 정해 매주 다음 명언이 순서대로 등록되도록 함
+          const startOfYear = new Date(kstDate.getFullYear(), 0, 1);
+          const weekOfYear = Math.floor((kstDate - startOfYear) / (7 * 24 * 60 * 60 * 1000));
+          const q = quotes[weekOfYear % quotes.length];
+          const author = q.profile ? `${q.author} (${q.profile})` : q.author;
+          title = `💡 [오늘의 명언] ${q.author}의 한마디`;
+          content = `"${q.quote}"\n\n- ${author} -\n\n💬 의미: ${q.meaning}`;
+          console.log(`Selected quote (week ${weekOfYear}): ${q.author}`);
+        } else {
+          console.log('quotes.json is empty, using default content.');
+        }
       } else {
-        console.log(`Failed to fetch quote, status: ${response.status}`);
+        console.log(`quotes.json not found at ${quotesFile}, using default content.`);
       }
-    } catch (apiError) {
-      console.log('Error fetching quote API, using fallback content:', apiError.message);
+    } catch (quoteError) {
+      console.error('Error reading quotes.json, using default content:', quoteError);
     }
   }
 
